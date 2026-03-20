@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cards Game</title>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #fdf6ee;
+      --accent: #f4845f;
+      --accent2: #7ec8c8;
+      --btn-shadow: #d96040;
+      --text: #3d2b1f;
+      --card-w: 340px;
+      --card-h: 480px;
+    }
+
+    body {
+      font-family: 'Baloo 2', cursive;
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Soft background blobs */
+    body::before, body::after {
+      content: '';
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.35;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::before {
+      width: 520px; height: 520px;
+      background: radial-gradient(circle, #f9c784, #f4845f);
+      top: -100px; left: -100px;
+    }
+    body::after {
+      width: 480px; height: 480px;
+      background: radial-gradient(circle, #a8ddd9, #7ec8c8);
+      bottom: -80px; right: -80px;
+    }
+
+    /* ── Layout ── */
+    .scene {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 56px;
+    }
+
+    /* ── Card stack ── */
+    .stack {
+      position: relative;
+      width: var(--card-w);
+      height: var(--card-h);
+    }
+
+    .card {
+      position: absolute;
+      top: 0; left: 0;
+      width: var(--card-w);
+      height: var(--card-h);
+      border-radius: 22px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(61,43,31,0.18);
+      will-change: transform, opacity;
+      transform-origin: center center;
+    }
+
+    .card img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    /* Ghost cards behind the top one */
+    .card.ghost-1 {
+      transform: rotate(-4deg) translate(-14px, 10px);
+      z-index: 1;
+      filter: brightness(0.88);
+    }
+    .card.ghost-2 {
+      transform: rotate(3deg) translate(10px, 14px);
+      z-index: 2;
+      filter: brightness(0.80);
+    }
+    .card.ghost-3 {
+      transform: rotate(-1.5deg) translate(-6px, 20px);
+      z-index: 3;
+      filter: brightness(0.72);
+    }
+
+    /* The visible top card */
+    .card.top {
+      z-index: 10;
+      transform: rotate(0deg) translate(0, 0);
+      transition: none;
+    }
+
+    /* ── Animations ── */
+    @keyframes flyOut {
+      0%   { transform: rotate(0deg) translate(0,0) scale(1); opacity: 1; }
+      40%  { transform: rotate(-8deg) translate(-60px, -30px) scale(1.05); opacity: 1; }
+      100% { transform: rotate(-15deg) translate(-520px, -120px) scale(0.85); opacity: 0; }
+    }
+
+    @keyframes flyIn {
+      0%   { transform: rotate(6deg) translate(30px, 60px) scale(0.82); opacity: 0; z-index: 10; }
+      60%  { transform: rotate(-2deg) translate(-8px, -8px) scale(1.03); opacity: 1; }
+      100% { transform: rotate(0deg) translate(0,0) scale(1); opacity: 1; }
+    }
+
+    .card.anim-out {
+      animation: flyOut 0.52s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+      z-index: 15;
+      pointer-events: none;
+    }
+
+    .card.anim-in {
+      animation: flyIn 0.56s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      z-index: 10;
+    }
+
+    /* ── Shuffle Button ── */
+    .btn-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .shuffle-btn {
+      position: relative;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 20px;
+      padding: 18px 28px;
+      font-family: 'Baloo 2', cursive;
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 6px 0 var(--btn-shadow), 0 10px 28px rgba(244,132,95,0.38);
+      transition: transform 0.08s, box-shadow 0.08s;
+      user-select: none;
+      min-width: 130px;
+    }
+
+    .shuffle-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 0 var(--btn-shadow), 0 14px 32px rgba(244,132,95,0.42);
+    }
+
+    .shuffle-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 var(--btn-shadow), 0 4px 12px rgba(244,132,95,0.28);
+    }
+
+    .shuffle-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-icon {
+      font-size: 2rem;
+      line-height: 1;
+      display: block;
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .shuffle-btn:hover .btn-icon {
+      transform: rotate(180deg);
+    }
+
+    .btn-label {
+      font-size: 0.95rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    /* Counter badge */
+    .counter {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text);
+      opacity: 0.55;
+      letter-spacing: 0.04em;
+    }
+
+    /* Hint text on first load */
+    .hint {
+      position: absolute;
+      bottom: -52px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text);
+      opacity: 0.38;
+      white-space: nowrap;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    /* Music button */
+    .music-btn {
+      position: relative;
+      background: var(--accent2);
+      color: #fff;
+      border: none;
+      border-radius: 20px;
+      padding: 18px 28px;
+      font-family: 'Baloo 2', cursive;
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 6px 0 #5aabab, 0 10px 28px rgba(126,200,200,0.38);
+      transition: transform 0.08s, box-shadow 0.08s;
+      user-select: none;
+      min-width: 130px;
+    }
+    .music-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 0 #5aabab, 0 14px 32px rgba(126,200,200,0.42);
+    }
+    .music-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 #5aabab, 0 4px 12px rgba(126,200,200,0.28);
+    }
+    .music-icon {
+      font-size: 2rem;
+      line-height: 1;
+      display: block;
+    }
+    .music-label {
+      font-size: 0.95rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    /* Vinyl spin animation when playing */
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+    .music-btn.playing .music-icon {
+      animation: spin 2s linear infinite;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      :root { --card-w: 260px; --card-h: 370px; }
+      .scene { flex-direction: column; gap: 36px; }
+      .btn-wrap { flex-direction: row; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="scene">
+
+  <!-- Card stack -->
+  <div class="stack" id="stack">
+    <!-- Ghost cards (visual depth) -->
+    <div class="card ghost-1" id="ghost1">
+      <img src="images/cover_card.png" alt="" />
+    </div>
+    <div class="card ghost-2" id="ghost2">
+      <img src="images/cover_card.png" alt="" />
+    </div>
+    <div class="card ghost-3" id="ghost3">
+      <img src="images/cover_card.png" alt="" />
+    </div>
+
+    <!-- Top (visible) card -->
+    <div class="card top" id="topCard">
+      <img src="images/cover_card.png" alt="Card" id="topImg" />
+    </div>
+
+    <span class="hint">click shuffle to start ✨</span>
+  </div>
+
+  <!-- Shuffle button -->
+  <div class="btn-wrap">
+    <button class="shuffle-btn" id="shuffleBtn" onclick="shuffle()">
+      <span class="btn-icon">🔀</span>
+      <span class="btn-label">Shuffle</span>
+    </button>
+    <span class="counter" id="counter">26 cards</span>
+
+    <button class="music-btn" id="musicBtn" onclick="toggleMusic()">
+      <span class="music-icon">🎵</span>
+      <span class="music-label">Music</span>
+    </button>
+  </div>
+
+</div>
+
+<audio id="bgMusic" loop>
+  <source src="music.mp3" type="audio/mpeg" />
+</audio>
+
+<script>
+  // All 26 game cards (cover is separate — always first)
+  const GAME_CARDS = [
+    'images/action_1.png',
+    'images/action_2.png',
+    'images/action_3.png',
+    'images/action_4.png',
+    'images/action_5.png',
+    'images/action_6.png',
+    'images/action_7.png',
+    'images/challenge_1.png',
+    'images/challenge_2.png',
+    'images/challenge_3.png',
+    'images/challenge_4.png',
+    'images/challenge_5.png',
+    'images/challenge_6.png',
+    'images/challenge_7.png',
+    'images/question_1.png',
+    'images/question_2.png',
+    'images/question_3.png',
+    'images/question_4.png',
+    'images/question_5.png',
+    'images/question_6.png',
+    'images/whatif_1.png',
+    'images/whatif_2.png',
+    'images/whatif_3.png',
+    'images/whatif_4.png',
+    'images/whatif_5.png',
+    'images/whatif_6.png',
+  ];
+
+  let deck = [];
+  let deckIndex = 0;
+  let isAnimating = false;
+  let hintHidden = false;
+
+  function buildDeck() {
+    deck = [...GAME_CARDS];
+    // Fisher-Yates shuffle
+    for (let i = deck.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+    deckIndex = 0;
+  }
+
+  function updateCounter() {
+    const remaining = deck.length - deckIndex;
+    const el = document.getElementById('counter');
+    if (remaining === 0) {
+      el.textContent = 'deck complete!';
+    } else {
+      el.textContent = remaining + ' card' + (remaining !== 1 ? 's' : '') + ' left';
+    }
+  }
+
+  function updateGhosts(nextSrc) {
+    // Peek behind — show the next few cards in deck as ghost layers
+    const ghost1 = document.getElementById('ghost1');
+    const ghost2 = document.getElementById('ghost2');
+    const ghost3 = document.getElementById('ghost3');
+    const peekA = deck[(deckIndex) % deck.length];
+    const peekB = deck[(deckIndex + 1) % deck.length];
+    const peekC = deck[(deckIndex + 2) % deck.length];
+    ghost1.querySelector('img').src = peekA || nextSrc;
+    ghost2.querySelector('img').src = peekB || nextSrc;
+    ghost3.querySelector('img').src = peekC || nextSrc;
+  }
+
+  function shuffle() {
+    if (isAnimating) return;
+
+    // Hide hint
+    if (!hintHidden) {
+      const hint = document.querySelector('.hint');
+      if (hint) { hint.style.opacity = '0'; hint.style.transition = 'opacity 0.4s'; }
+      hintHidden = true;
+    }
+
+    // If deck exhausted, reshuffle
+    if (deckIndex >= deck.length) {
+      buildDeck();
+    }
+
+    isAnimating = true;
+    const btn = document.getElementById('shuffleBtn');
+    btn.disabled = true;
+
+    const topCard = document.getElementById('topCard');
+    const topImg = document.getElementById('topImg');
+    const nextSrc = deck[deckIndex];
+    deckIndex++;
+
+    // Pre-update ghost cards
+    updateGhosts(nextSrc);
+    updateCounter();
+
+    // Create outgoing card clone (so we can animate it flying out)
+    const outCard = document.createElement('div');
+    outCard.className = 'card anim-out';
+    outCard.innerHTML = `<img src="${topImg.src}" alt="" />`;
+    document.getElementById('stack').appendChild(outCard);
+
+    // Update the real top card to the new image (hidden momentarily)
+    topImg.src = nextSrc;
+    topCard.style.opacity = '0';
+    topCard.classList.remove('anim-in');
+
+    // After a tiny delay, trigger fly-in
+    setTimeout(() => {
+      topCard.style.opacity = '';
+      topCard.classList.add('anim-in');
+    }, 80);
+
+    // Clean up after animations
+    outCard.addEventListener('animationend', () => {
+      outCard.remove();
+    }, { once: true });
+
+    topCard.addEventListener('animationend', () => {
+      topCard.classList.remove('anim-in');
+      isAnimating = false;
+      btn.disabled = false;
+    }, { once: true });
+  }
+
+  // Music
+  function toggleMusic() {
+    const audio = document.getElementById('bgMusic');
+    const btn = document.getElementById('musicBtn');
+    const icon = btn.querySelector('.music-icon');
+    const label = btn.querySelector('.music-label');
+    if (audio.paused) {
+      audio.play();
+      btn.classList.add('playing');
+      icon.textContent = '🎶';
+      label.textContent = 'Playing';
+    } else {
+      audio.pause();
+      btn.classList.remove('playing');
+      icon.textContent = '🎵';
+      label.textContent = 'Music';
+    }
+  }
+
+  // Init
+  buildDeck();
+  updateGhosts('images/cover_card.png');
+  updateCounter();
+
+  // Keyboard shortcut
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' || e.code === 'ArrowRight') {
+      e.preventDefault();
+      shuffle();
+    }
+  });
+</script>
+</body>
+</html>
