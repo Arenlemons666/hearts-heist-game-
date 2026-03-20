@@ -9,7 +9,7 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #fdf6ee;
+      --bg: #fce4ec;
       --accent: #f4845f;
       --accent2: #7ec8c8;
       --btn-shadow: #d96040;
@@ -29,7 +29,6 @@
       position: relative;
     }
 
-    /* Soft background blobs */
     body::before, body::after {
       content: '';
       position: fixed;
@@ -50,7 +49,6 @@
       bottom: -80px; right: -80px;
     }
 
-    /* ── Layout ── */
     .scene {
       position: relative;
       z-index: 1;
@@ -59,7 +57,6 @@
       gap: 56px;
     }
 
-    /* ── Card stack ── */
     .stack {
       position: relative;
       width: var(--card-w);
@@ -86,7 +83,6 @@
       user-select: none;
     }
 
-    /* Ghost cards behind the top one */
     .card.ghost-1 {
       transform: rotate(-4deg) translate(-14px, 10px);
       z-index: 1;
@@ -103,14 +99,12 @@
       filter: brightness(0.72);
     }
 
-    /* The visible top card */
     .card.top {
       z-index: 10;
       transform: rotate(0deg) translate(0, 0);
       transition: none;
     }
 
-    /* ── Animations ── */
     @keyframes flyOut {
       0%   { transform: rotate(0deg) translate(0,0) scale(1); opacity: 1; }
       40%  { transform: rotate(-8deg) translate(-60px, -30px) scale(1.05); opacity: 1; }
@@ -134,7 +128,6 @@
       z-index: 10;
     }
 
-    /* ── Shuffle Button ── */
     .btn-wrap {
       display: flex;
       flex-direction: column;
@@ -197,7 +190,6 @@
       text-transform: uppercase;
     }
 
-    /* Counter badge */
     .counter {
       font-size: 0.8rem;
       font-weight: 600;
@@ -206,7 +198,6 @@
       letter-spacing: 0.04em;
     }
 
-    /* Hint text on first load */
     .hint {
       position: absolute;
       bottom: -52px;
@@ -221,7 +212,6 @@
       text-transform: uppercase;
     }
 
-    /* Music button */
     .music-btn {
       position: relative;
       background: var(--accent2);
@@ -262,7 +252,6 @@
       text-transform: uppercase;
     }
 
-    /* Vinyl spin animation when playing */
     @keyframes spin {
       from { transform: rotate(0deg); }
       to   { transform: rotate(360deg); }
@@ -271,7 +260,6 @@
       animation: spin 2s linear infinite;
     }
 
-    /* Responsive */
     @media (max-width: 600px) {
       :root { --card-w: 260px; --card-h: 370px; }
       .scene { flex-direction: column; gap: 36px; }
@@ -283,9 +271,7 @@
 
 <div class="scene">
 
-  <!-- Card stack -->
   <div class="stack" id="stack">
-    <!-- Ghost cards (visual depth) -->
     <div class="card ghost-1" id="ghost1">
       <img src="images/cover_card.png" alt="" />
     </div>
@@ -296,7 +282,6 @@
       <img src="images/cover_card.png" alt="" />
     </div>
 
-    <!-- Top (visible) card -->
     <div class="card top" id="topCard">
       <img src="images/cover_card.png" alt="Card" id="topImg" />
     </div>
@@ -304,7 +289,6 @@
     <span class="hint">click shuffle to start ✨</span>
   </div>
 
-  <!-- Shuffle button -->
   <div class="btn-wrap">
     <button class="shuffle-btn" id="shuffleBtn" onclick="shuffle()">
       <span class="btn-icon">🔀</span>
@@ -325,7 +309,6 @@
 </audio>
 
 <script>
-  // All 26 game cards (cover is separate — always first)
   const GAME_CARDS = [
     'images/action_1.png',
     'images/action_2.png',
@@ -362,7 +345,6 @@
 
   function buildDeck() {
     deck = [...GAME_CARDS];
-    // Fisher-Yates shuffle
     for (let i = deck.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [deck[i], deck[j]] = [deck[j], deck[i]];
@@ -381,7 +363,6 @@
   }
 
   function updateGhosts(nextSrc) {
-    // Peek behind — show the next few cards in deck as ghost layers
     const ghost1 = document.getElementById('ghost1');
     const ghost2 = document.getElementById('ghost2');
     const ghost3 = document.getElementById('ghost3');
@@ -396,14 +377,12 @@
   function shuffle() {
     if (isAnimating) return;
 
-    // Hide hint
     if (!hintHidden) {
       const hint = document.querySelector('.hint');
       if (hint) { hint.style.opacity = '0'; hint.style.transition = 'opacity 0.4s'; }
       hintHidden = true;
     }
 
-    // If deck exhausted, reshuffle
     if (deckIndex >= deck.length) {
       buildDeck();
     }
@@ -417,28 +396,23 @@
     const nextSrc = deck[deckIndex];
     deckIndex++;
 
-    // Pre-update ghost cards
     updateGhosts(nextSrc);
     updateCounter();
 
-    // Create outgoing card clone (so we can animate it flying out)
     const outCard = document.createElement('div');
     outCard.className = 'card anim-out';
     outCard.innerHTML = `<img src="${topImg.src}" alt="" />`;
     document.getElementById('stack').appendChild(outCard);
 
-    // Update the real top card to the new image (hidden momentarily)
     topImg.src = nextSrc;
     topCard.style.opacity = '0';
     topCard.classList.remove('anim-in');
 
-    // After a tiny delay, trigger fly-in
     setTimeout(() => {
       topCard.style.opacity = '';
       topCard.classList.add('anim-in');
     }, 80);
 
-    // Clean up after animations
     outCard.addEventListener('animationend', () => {
       outCard.remove();
     }, { once: true });
@@ -451,6 +425,9 @@
   }
 
   // Music
+  const bgMusic = document.getElementById('bgMusic');
+  bgMusic.volume = 0.3;
+
   function toggleMusic() {
     const audio = document.getElementById('bgMusic');
     const btn = document.getElementById('musicBtn');
@@ -474,7 +451,6 @@
   updateGhosts('images/cover_card.png');
   updateCounter();
 
-  // Keyboard shortcut
   document.addEventListener('keydown', (e) => {
     if (e.code === 'Space' || e.code === 'ArrowRight') {
       e.preventDefault();
